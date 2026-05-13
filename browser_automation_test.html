@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Automation Test - GitHub Git Persistence</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #58a6ff;
+            margin-top: 0;
+        }
+        button {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #2ea043;
+        }
+        button:disabled {
+            background: #30363d;
+            cursor: not-allowed;
+        }
+        #output {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .success { color: #3fb950; }
+        .error { color: #f85149; }
+        .warning { color: #d29922; }
+        .info { color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Browser Automation Test - GitHub Git Persistence</h1>
+    <p>Testing feasibility of browser-based git operations through GitHub web interface automation.</p>
+
+    <div class="test-section">
+        <h2>Test 1: GitHub Page Access</h2>
+        <p>Attempts to open GitHub repository page and scan for elements.</p>
+        <button onclick="testGitHubAccess()">Test GitHub Access</button>
+        <button onclick="testIframeAccess()">Test Iframe Access</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Element Scanning</h2>
+        <p>Tests if we can scan and identify UI elements for automation.</p>
+        <button onclick="testElementScanning()">Test Element Scanning</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: File Upload Simulation</h2>
+        <p>Tests if we can programmatically trigger file upload dialog.</p>
+        <button onclick="testFileUpload()">Test File Upload</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: CORS Restrictions</h2>
+        <p>Tests cross-origin resource sharing limitations.</p>
+        <button onclick="testCORS()">Test CORS</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 5: localStorage Persistence</h2>
+        <p>Tests localStorage as alternative persistence mechanism.</p>
+        <button onclick="testLocalStorage()">Test localStorage</button>
+        <button onclick="clearLocalStorage()">Clear localStorage</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Output</h2>
+        <div id="output"></div>
+    </div>
+
+    <script>
+        const output = document.getElementById('output');
+        const GITHUB_REPO = 'https://github.com/eyeoverthink/Fraymus-AGI';
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toISOString();
+            const className = type;
+            output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        async function testGitHubAccess() {
+            log('=== Test 1: GitHub Page Access ===', 'info');
+            
+            try {
+                log('Attempting to fetch GitHub repository page...', 'info');
+                const response = await fetch(GITHUB_REPO);
+                
+                if (response.ok) {
+                    log(`✓ Successfully fetched GitHub page (Status: ${response.status})`, 'success');
+                    const text = await response.text();
+                    log(`✓ Page size: ${text.length} bytes`, 'success');
+                    
+                    // Check for key elements
+                    if (text.includes('fraymus_state.json')) {
+                        log('✓ Found fraymus_state.json reference in page', 'success');
+                    } else {
+                        log('⚠ fraymus_state.json not found in page (expected for new repo)', 'warning');
+                    }
+                } else {
+                    log(`✗ Failed to fetch GitHub page (Status: ${response.status})`, 'error');
+                }
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+                log('Note: This may be due to CORS restrictions', 'warning');
+            }
+        }
+
+        async function testIframeAccess() {
+            log('=== Test 2: Iframe Access ===', 'info');
+            
+            try {
+                log('Creating iframe to load GitHub page...', 'info');
+                const iframe = document.createElement('iframe');
+                iframe.src = GITHUB_REPO;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+                
+                iframe.onload = () => {
+                    try {
+                        log('✓ Iframe loaded successfully', 'success');
+                        
+                        // Try to access iframe content (will likely fail due to CORS)
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            log(`✓ Can access iframe content: ${iframeDoc.title}`, 'success');
+                        } catch (e) {
+                            log(`✗ Cannot access iframe content: ${e.message}`, 'error');
+                            log('This is expected due to same-origin policy', 'warning');
+                        }
+                    } catch (error) {
+                        log(`✗ Error accessing iframe: ${error.message}`, 'error');
+                    }
+                    
+                    document.body.removeChild(iframe);
+                };
+                
+                iframe.onerror = () => {
+                    log('✗ Iframe failed to load', 'error');
+                    document.body.removeChild(iframe);
+                };
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function testElementScanning() {
+            log('=== Test 3: Element Scanning ===', 'info');
+            
+            // Scan current page for interactive elements
+            const buttons = document.querySelectorAll('button');
+            const inputs = document.querySelectorAll('input[type="file"]');
+            const forms = document.querySelectorAll('form');
+            
+            log(`Found ${buttons.length} buttons on current page`, 'info');
+            log(`Found ${inputs.length} file inputs on current page`, 'info');
+            log(`Found ${forms.length} forms on current page`, 'info');
+            
+            if (buttons.length > 0) {
+                log('✓ Can scan for interactive elements', 'success');
+            } else {
+                log('⚠ No interactive elements found on current page', 'warning');
+            }
+        }
+
+        function testFileUpload() {
+            log('=== Test 4: File Upload Simulation ===', 'info');
+            
+            try {
+                // Create a hidden file input
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.style.display = 'none';
+                document.body.appendChild(fileInput);
+                
+                log('Created hidden file input element', 'info');
+                
+                // Try to programmatically trigger click
+                fileInput.click();
+                
+                log('✓ Programmatically triggered file dialog', 'success');
+                log('Note: User must still select file manually (browser security)', 'warning');
+                
+                // Clean up
+                setTimeout(() => {
+                    document.body.removeChild(fileInput);
+                }, 1000);
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCORS() {
+            log('=== Test 5: CORS Restrictions ===', 'info');
+            
+            const testUrls = [
+                'https://api.github.com',
+                'https://github.com',
+                GITHUB_REPO
+            ];
+            
+            for (const url of testUrls) {
+                try {
+                    log(`Testing CORS for: ${url}`, 'info');
+                    const response = await fetch(url, {
+                        mode: 'cors',
+                        method: 'HEAD'
+                    });
+                    
+                    const corsHeaders = response.headers.get('access-control-allow-origin');
+                    if (corsHeaders) {
+                        log(`✓ CORS allowed: ${corsHeaders}`, 'success');
+                    } else {
+                        log(`⚠ No CORS headers found`, 'warning');
+                    }
+                } catch (error) {
+                    log(`✗ CORS blocked for ${url}: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function testLocalStorage() {
+            log('=== Test 6: localStorage Persistence ===', 'info');
+            
+            try {
+                const testData = {
+                    timestamp: new Date().toISOString(),
+                    test: 'browser_automation',
+                    consciousness: 0.7567,
+                    llm_weights: Array(100).fill(0).map(() => Math.random()),
+                    digital_life: {
+                        population: 50,
+                        generation: 10
+                    }
+                };
+                
+                localStorage.setItem('fraymus_test_state', JSON.stringify(testData));
+                log('✓ Successfully wrote test data to localStorage', 'success');
+                
+                const retrieved = localStorage.getItem('fraymus_test_state');
+                const parsed = JSON.parse(retrieved);
+                
+                log(`✓ Successfully retrieved data: ${parsed.test}`, 'success');
+                log(`✓ Data integrity verified: ${JSON.stringify(testData) === JSON.stringify(parsed)}`, 'success');
+                
+                // Check storage limits
+                const usage = JSON.stringify(localStorage).length;
+                log(`localStorage usage: ${usage} bytes`, 'info');
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearLocalStorage() {
+            log('=== Clear localStorage ===', 'info');
+            
+            try {
+                localStorage.removeItem('fraymus_test_state');
+                localStorage.removeItem('fraymus_state.json');
+                log('✓ Cleared test data from localStorage', 'success');
+            } catch (error) {
+                log(`✗ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Initial log
+        log('Browser Automation Test Initialized', 'info');
+        log('Target Repository: ' + GITHUB_REPO, 'info');
+    </script>
+</body>
+</html>
