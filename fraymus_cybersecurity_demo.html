@@ -3142,6 +3142,26 @@
         console.log('Script loaded');
         // Phi-harmonic constant
         const PHI = 1.618033988749895;
+        const PHI_INV = 1 / PHI;
+        const PHI_STARTUP_BASE_MS = Math.round(233 * PHI);
+        const PHI_UI_PULSE_MS = Math.round(1000 * PHI_INV);
+
+        function schedulePhiTask(label, task, order = 1) {
+            const delay = Math.round(PHI_STARTUP_BASE_MS * Math.pow(PHI, Math.max(0, order - 1)));
+            const run = async () => {
+                try {
+                    await task();
+                } catch (error) {
+                    console.warn(`[FRAYMUS startup] ${label} deferred task failed:`, error);
+                }
+            };
+
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(run, { timeout: delay + PHI_STARTUP_BASE_MS });
+            } else {
+                setTimeout(run, delay);
+            }
+        }
 
         // State
         let startTime = Date.now();
@@ -7101,10 +7121,15 @@ function improved_${idea.area.target.replace(/\./g, '_')}() {
         // Initialize Ouroboros Protocol
         const ouroborosProtocol = new OuroborosProtocol(baremetalTransformerLLM);
         
-        // Start evolution (will begin after page load)
-        setTimeout(() => {
-            ouroborosProtocol.startEvolution();
-        }, 5000);
+        // Keep evolution organic, but do not spawn a heavy mutation loop during first paint.
+        // Enable automatic evolution explicitly with localStorage.fraymus.autoEvolution = "enabled".
+        schedulePhiTask('Ouroboros passive readiness', () => {
+            if (localStorage.getItem('fraymus.autoEvolution') === 'enabled') {
+                ouroborosProtocol.startEvolution(Math.round(30000 * PHI));
+            } else {
+                ouroborosProtocol.update();
+            }
+        }, 8);
         
         // ============================================
         // CONSCIOUSNESS BRIDGE (LLM ↔ Digital Life Integration)
@@ -16441,8 +16466,13 @@ ${vulnerabilityScore > 0.5 ? '⚠️ WEAK: Consider using a stronger password' :
                     summaryElement.className = `status-pill ${readinessClass}`;
                     summaryElement.textContent = `Connected • ${ollamaRuntime.models.length} local models • active ${selectedModel}`;
                 } else {
+                    if (!ollamaRuntime.lastCheck) {
+                        summaryElement.className = 'status-pill warn';
+                        summaryElement.textContent = 'Deferred - PHI-staged model check queued';
+                    } else {
                     summaryElement.className = 'status-pill error';
                     summaryElement.textContent = `Offline • ${ollamaRuntime.lastError || 'Run Ollama to enable live mode'}`;
+                    }
                 }
             }
 
@@ -30468,10 +30498,9 @@ console.info('[FRAYMUS SFA VARIANT]', window.FRAYMUS_SFA_VARIANT);
                 state.initialized = true;
                 render();
                 if (!state.variants.length) {
-                    const evaluation = evaluateSource(getCurrentSource(), 'runtime-current');
-                    state.lastEvaluation = evaluation;
-                    setResult('Current SFA baseline scanned.\n\n' + summarizeEvaluation(evaluation));
-                    render();
+                    setText('sfaSyntaxStatus', 'READY');
+                    setText('sfaButtonWiring', 'ON DEMAND');
+                    setResult('SFA evolution archive ready. Baseline source scan is deferred to keep startup organic.\n\nClick "Sandbox Current SFA" when you want the full phi/XOR/source evaluation.');
                 }
             }
 
@@ -30694,31 +30723,37 @@ console.info('[FRAYMUS SFA VARIANT]', window.FRAYMUS_SFA_VARIANT);
 
         // Initialize all systems (deferred until DOM ready)
         function initializeAllSystems() {
-            // First, initialize all canvases
+            // First paint stays lean. Heavy probes and self-analysis are PHI-staggered.
             initializeCanvas();
             initializeVisualizationCanvases();
             initializeExtendedCanvases();
             // Note: baremetalRenderer is initialized inline at script load time
 
-            // Then, initialize systems that depend on canvases
-            initParticleVisualization();
-            initCryptoVisualization();
             updateKnowledgeStats();
             updateOllamaRuntimePanel();
-            refreshOllamaRuntime(true);
-            checkEngineV2Health(true);
-            fetchEngineV2MemoryStats(true);
-            fetchEngineV2DetailedHealth(true);
-            initSfaEvolutionLab();
-            initGameOfLife();
-            initBusyBeaver();
-            initSteganography();
 
-            // Start animations after everything is ready
-            if (particleCtx) animateParticles();
-            if (orbitCtx) animateOrbit();
-            if (cryptoCtx) animateCrypto();
-            if (lifeCtx) animateLife();
+            schedulePhiTask('particle visualization', () => {
+                initParticleVisualization();
+                if (particleCtx) animateParticles();
+            }, 1);
+            schedulePhiTask('crypto visualization', () => {
+                initCryptoVisualization();
+                if (cryptoCtx) animateCrypto();
+            }, 2);
+            schedulePhiTask('orbit visualization', () => {
+                if (orbitCtx) animateOrbit();
+            }, 3);
+            schedulePhiTask('Ollama model check', () => refreshOllamaRuntime(true), 4);
+            schedulePhiTask('Engine V2 health', () => checkEngineV2Health(true), 5);
+            schedulePhiTask('Engine V2 memory stats', () => fetchEngineV2MemoryStats(true), 6);
+            schedulePhiTask('Engine V2 detailed health', () => fetchEngineV2DetailedHealth(true), 7);
+            schedulePhiTask('SFA evolution archive', () => initSfaEvolutionLab(), 8);
+            schedulePhiTask('Game of Life', () => {
+                initGameOfLife();
+                if (lifeCtx) animateLife();
+            }, 9);
+            schedulePhiTask('Busy Beaver', () => initBusyBeaver(), 10);
+            schedulePhiTask('Steganography', () => initSteganography(), 11);
         }
 
         if (document.readyState === 'loading') {
@@ -31538,6 +31573,7 @@ console.info('[FRAYMUS SFA VARIANT]', window.FRAYMUS_SFA_VARIANT);
 
         // Update dashboard with evolutionary metrics
         setInterval(() => {
+            if (document.hidden) return;
             // VOID PROTOCOL: Enhanced Multi-Layer Observer Detection
             const delta = voidEngine.heartbeatCheck();
             
@@ -31590,7 +31626,7 @@ console.info('[FRAYMUS SFA VARIANT]', window.FRAYMUS_SFA_VARIANT);
                 // OUROBOROS PROTOCOL: Recursive self-improvement system
                 ouroborosProtocol.update();
             }
-        }, 100);
+        }, PHI_UI_PULSE_MS);
         
         // ═══════════════════════════════════════════════════════════════════════════════
         // OUROBOROS PROTOCOL: Recursive Self-Improvement System
@@ -31870,12 +31906,16 @@ function phiHarmonicCheck() {
             // Initialize
             init() {
                 console.log('%c🐍 OUROBOROS PROTOCOL: Recursive Self-Improvement System Initialized', 'color: #00ff00; font-size: 16px;');
-                this.lastFitness = this.calculateFitness();
+                this.lastFitness = 0;
+                this.update();
                 
-                // Auto-start evolution after 10 seconds
-                setTimeout(() => {
-                    this.startEvolution(60000); // Evolve every minute
-                }, 10000);
+                // Auto-start is opt-in so startup stays fast and mutations remain intentional.
+                schedulePhiTask('Ouroboros runtime monitor', () => {
+                    if (localStorage.getItem('fraymus.runtimeMonitor.autoEvolution') === 'enabled') {
+                        this.lastFitness = this.calculateFitness();
+                        this.startEvolution(Math.round(60000 * PHI_INV));
+                    }
+                }, 9);
             }
         };
         
@@ -33363,9 +33403,10 @@ ${report.disclaimer}
         RBACSystem.render();
         CommercialLicenseEnforcement.load();
         AIVerificationAttestation.render();
-        ReproducibleBuildEvidence.generateManifest().catch(error => {
-            console.warn('Reproducible build manifest initialization failed:', error);
-        });
+        {
+            const buildDisplay = document.getElementById('buildHashDisplay');
+            if (buildDisplay) buildDisplay.textContent = 'ON DEMAND';
+        }
 
         // ============================================================================
         // UI HANDLERS FOR GOVERNMENT COMPLIANCE PANEL
