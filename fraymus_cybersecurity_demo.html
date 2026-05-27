@@ -16480,8 +16480,10 @@ ${vulnerabilityScore > 0.5 ? '⚠️ WEAK: Consider using a stronger password' :
                 if (ollamaRuntime.connected) {
                     const lastCheck = ollamaRuntime.lastCheck ? ollamaRuntime.lastCheck.toLocaleTimeString() : 'n/a';
                     hintElement.textContent = `Required FRAYMUS cores: ${requiredReady}/${OLLAMA_REQUIRED_MODELS.length}. Session memory snippets: ${ollamaRuntime.learnedSnippets.length}. Last check: ${lastCheck}.`;
+                } else if (!ollamaRuntime.lastCheck) {
+                    hintElement.textContent = 'Startup is PHI-staggered for faster first paint. Click Refresh Model Check or wait for the deferred check.';
                 } else {
-                    hintElement.textContent = 'Live mode expects a browser-reachable Ollama endpoint. If this HTML is opened as a local file, use OLLAMA_ORIGINS=* or serve the page from localhost.';
+                    hintElement.textContent = getOllamaOriginHint();
                 }
             }
 
@@ -16553,9 +16555,17 @@ ${vulnerabilityScore > 0.5 ? '⚠️ WEAK: Consider using a stronger password' :
             updateOllamaRuntimePanel();
         }
 
+        function getOllamaOriginHint() {
+            const pageOrigin = location.origin === 'null' ? 'file:// (Origin: null)' : location.origin;
+            if (location.protocol === 'file:') {
+                return `Browser origin is ${pageOrigin}. Ollama rejects file:// Origin:null, even though the local runtime is running. Open this SFA through http://localhost:8080/fraymus_cybersecurity_demo.html or restart Ollama with OLLAMA_ORIGINS=* to allow file-origin pages.`;
+            }
+            return `Browser origin is ${pageOrigin}. If Ollama still fails, make sure OLLAMA_ORIGINS includes this origin and that http://127.0.0.1:11434/api/tags is reachable.`;
+        }
+
         function formatOllamaFailureMessage(error) {
             const reason = error?.message || String(error);
-            return `Live Ollama runtime unavailable: ${reason}\nIf this page is opened from file://, run Ollama with OLLAMA_ORIGINS=* or serve the HTML from localhost.`;
+            return `Live Ollama runtime unavailable: ${reason}\n${getOllamaOriginHint()}`;
         }
 
         async function runOllamaPrompt(prompt, options = {}) {
