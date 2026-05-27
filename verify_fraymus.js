@@ -137,7 +137,7 @@ class FraymusVerifier {
             state = state ^ (state >> 31n);
             
             // Phi-harmonic amplitude modulation
-            const normalized = Number(state & 0xFFFFFFFFFFFFFFFFn) / 0xFFFFFFFFFFFFFFFFn;
+            const normalized = Number(state & 0xFFFFFFFFFFFFFFFFn) / Number(0xFFFFFFFFFFFFFFFFn);
             const phiHarmonic = Math.pow(PHI, i % 7);
             vec[i] = normalized * phiHarmonic;
         }
