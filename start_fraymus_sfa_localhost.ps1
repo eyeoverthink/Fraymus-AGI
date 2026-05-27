@@ -19,6 +19,7 @@ try {
     throw "FRAYMUS localhost server did not respond at $url. $($_.Exception.Message)"
 }
 
-Start-Process $url
-Write-Host "FRAYMUS SFA opened at $url"
+$cacheBustedUrl = "${url}?v=$(Get-Date -Format 'yyyyMMddHHmmss')"
+Start-Process -FilePath "explorer.exe" -ArgumentList $cacheBustedUrl
+Write-Host "FRAYMUS SFA opened at $cacheBustedUrl"
 Write-Host "Use this localhost URL for live Ollama access. file:// pages are rejected by Ollama CORS as Origin:null."

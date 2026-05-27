@@ -3139,6 +3139,54 @@
     </div>
 
     <script>
+        (function fraymusBootPrelude() {
+            const guardedNames = [
+                'refreshOllamaRuntime',
+                'pingOllamaRuntime',
+                'checkEngineV2Health',
+                'fetchEngineV2MemoryStats',
+                'fetchEngineV2DetailedHealth'
+            ];
+
+            function renderBootFailure(name) {
+                const bootError = window.__FRAYMUS_BOOT_ERROR;
+                const message = [
+                    `FRAYMUS runtime did not finish booting before ${name}() was clicked.`,
+                    bootError ? `Parser/runtime error: ${bootError.message}` : 'The main script may still be loading, cached, or blocked by an earlier syntax error.',
+                    'Close old blob/generated variant tabs and reopen http://localhost:8080/fraymus_cybersecurity_demo.html.'
+                ].join('\n');
+                console.error(message, bootError || '');
+
+                const result = document.getElementById('complianceResult')
+                    || document.getElementById('baremetalResult')
+                    || document.getElementById('ollamaRuntimeHint');
+                if (result) {
+                    if ('innerHTML' in result) {
+                        result.innerHTML = `<pre>${message.replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[ch]))}</pre>`;
+                    } else {
+                        result.textContent = message;
+                    }
+                }
+            }
+
+            window.addEventListener('error', event => {
+                window.__FRAYMUS_BOOT_ERROR = {
+                    message: event.message || 'Unknown boot error',
+                    source: event.filename || 'unknown',
+                    line: event.lineno || 0,
+                    column: event.colno || 0
+                };
+            }, true);
+
+            for (const name of guardedNames) {
+                window[name] = function fraymusBootGuard() {
+                    renderBootFailure(name);
+                    return false;
+                };
+            }
+        })();
+    </script>
+    <script>
         console.log('Script loaded');
         // Phi-harmonic constant
         const PHI = 1.618033988749895;
@@ -30655,6 +30703,26 @@ console.info('[FRAYMUS SFA VARIANT]', window.FRAYMUS_SFA_VARIANT);
                 const champion = await getVariant(state.championId || findChampion()?.id);
                 if (!champion?.source) {
                     alert('No champion source available. Run an evolution cycle first.');
+                    return;
+                }
+                const evaluation = evaluateSource(champion.source, champion.id);
+                state.lastEvaluation = evaluation;
+                if (evaluation.syntaxErrors.length || evaluation.missingCalls.length) {
+                    setResult(`CHAMPION QUARANTINED - NOT OPENED
+
+${champion.id}
+
+This stored/generated variant failed the safety gate and would likely throw browser errors.
+It has NOT been deleted; it is simply blocked from launching until repaired.
+
+${summarizeEvaluation(evaluation)}
+
+Syntax Errors:
+${evaluation.syntaxErrors.map(error => `  - Script ${error.index + 1}: ${error.message}`).join('\n') || '  - none'}
+
+Missing Globals:
+${evaluation.missingCalls.slice(0, 30).map(name => `  - ${name}`).join('\n') || '  - none'}`);
+                    render();
                     return;
                 }
                 const blob = new Blob([champion.source], { type: 'text/html;charset=utf-8' });
